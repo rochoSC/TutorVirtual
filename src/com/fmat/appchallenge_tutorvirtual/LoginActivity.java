@@ -1,13 +1,5 @@
 package com.fmat.appchallenge_tutorvirtual;
 
-
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.http.NameValuePair;
-import org.apache.http.message.BasicNameValuePair;
-
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
@@ -157,30 +149,33 @@ public class LoginActivity extends Activity {
 			// perform the user login attempt.
 			mLoginStatusMessageView.setText(R.string.login_progress_signing_in);
 			showProgress(true);
-			LoginActivity.email=mEmail;
-			LoginActivity.password=mPassword;
-			//Aquí se hace la petición al web service con el usuario y contraseña correspondientes	
-			List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
-		
-            //nameValuePairs.add(new BasicNameValuePair("email", "joseracamacho@gmail.com"));
-            //nameValuePairs.add(new BasicNameValuePair("password", "12345678"));    
-            conexionWebService_thread conexion = new conexionWebService_thread(
-            		"http://192.168.228.101:3000/students/sign_in.json",nameValuePairs,true);//Es login
-            conexion.start();
-            while(!conexion.isReady){            	
-            }
-            if(!conexion.hasAnError()){	
-			Intent intent = new Intent(this, MainActivity.class);
-			intent.putExtra("email",this.mEmail);
-			intent.putExtra("password", this.mPassword);
-			startActivity(intent);
-            }else{//Error
-            	Toast.makeText(this, conexionWebService_thread.getErrorMessage(),Toast.LENGTH_LONG).show();
-            	mLoginStatusMessageView.setText("");
-    			showProgress(false);
-            }
+
+			// Guardamos el email y el password como static para fácil acceso
+			LoginActivity.email = mEmail;
+			LoginActivity.password = mPassword;
+			// La URL deberá contener el valór correspondiente a la ip y el
+			// puerto del host usado.
+			String URL = "http://192.168.228.101:3000/students/sign_in.json";
+			conexionWebService_thread conexion = new conexionWebService_thread(
+					URL, true);// True Es login
+			conexion.start();
+			// Esperamos a que se establezca la conexión
+			while (!conexion.isReady) {
+			}
+			if (!conexion.hasAnError()) {
+				// Abrimos la actividad principal que es la que contendrá el
+				// horario académico sugerido
+				Intent intent = new Intent(this, MainActivity.class);
+				startActivity(intent);
+			} else {// Error
+				Toast.makeText(this,
+						conexionWebService_thread.getErrorMessage(),
+						Toast.LENGTH_LONG).show();
+				mLoginStatusMessageView.setText("");
+				showProgress(false);
+			}
 		}
-		
+
 	}
 
 	/**

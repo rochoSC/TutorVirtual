@@ -4,42 +4,52 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.List;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.ResponseHandler;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import org.json.JSONObject;
 
+import android.app.Activity;
+import android.content.Context;
 import android.util.Log;
+import android.widget.EditText;
+import android.widget.TextView;
 
+/**
+ * 
+ * Esta clase tiene como objetivo establecer la conexión correspondiente al web
+ * service determinado mediante el uso del formato json.
+ * 
+ */
 public class conexionWebService_thread extends Thread {
 	public String url;
 	public boolean isReady = false;
 	private static final int TIMEOUT_MILLISEC = 1000;
 	public boolean hasAnError = false;
 	private static String errorMessage = null;
-	public List<NameValuePair> nameValuePairs;
 	public boolean isLogIn = true;
-
-	public conexionWebService_thread(String URL,
-			List<NameValuePair> nameValuePairs, boolean isLogIn) {
+	public Activity activity;
+	public static JSONObject jsonObjectAsignaturas;
+	public conexionWebService_thread(String URL, boolean isLogIn) {
 		this.url = URL;
-		this.nameValuePairs = nameValuePairs;
 		this.isLogIn = isLogIn;
+		
 	}
-
+	public void setActivity(Activity a){
+		this.activity=a;
+	}
+	/**
+	 * Se toma el stream obtenido mediante el request, y se convierte a un
+	 * String.
+	 */
 	private static String convertStreamToString(InputStream is) {
 
 		BufferedReader reader = new BufferedReader(new InputStreamReader(is));
@@ -62,46 +72,95 @@ public class conexionWebService_thread extends Thread {
 		return sb.toString();
 	}
 
+	/**
+	 * Método principal del hilo, este se encarga de establecer la conexión, y el páso de parámetros, así
+	 * como la obtención de datos.
+	 */
 	public void run() {
 		HttpParams httpParams = new BasicHttpParams();
 		HttpConnectionParams.setConnectionTimeout(httpParams, TIMEOUT_MILLISEC);
 		HttpConnectionParams.setSoTimeout(httpParams, TIMEOUT_MILLISEC);
-
+		//Instanciamos un cliente
 		HttpClient httpclient = new DefaultHttpClient();
+		//Instanciamos un request POST
 		HttpPost httppost = new HttpPost(url);
 
 		try {
-
-			if (isLogIn) {
+			//Verificamos como se ha accedidio, para determinar que tipo de json se enviará
+			//if (isLogIn) {
+				//Enviamos el email y el password correspondientes
 				JSONObject obj = new JSONObject("{'student':{'email':'"
 						+ LoginActivity.email + "','password':'"
-						+ LoginActivity.password + "'}}");
-				// JSONObject holder = new JSONObject();
+						+ LoginActivity.password + "'}}");				
 				StringEntity se = new StringEntity(obj.toString());
 				httppost.setEntity(se);
 				httppost.setHeader("Content-Type", "application/json");
+				//Solicitamos
 				HttpResponse response = httpclient.execute(httppost);
+				//Obtenemos
 				HttpEntity entity = response.getEntity();
 				InputStream is = entity.getContent();
+				//Convertimos
 				String bodyJson = convertStreamToString(is);
 				bodyJson = bodyJson.substring(1, bodyJson.length() - 1);
-				Log.i("Probando bodyJson", "BODY JSON: " + bodyJson);
+				//Parseamos
 				JSONObject json = new JSONObject(bodyJson);
-				String status = json.get("sign_in_status").toString();// Valores:
-																		// succes
-																		// ,
-																		// failure
-
+				//status puede tomar los siguientes valores: failure - succes
+				String status = json.get("sign_in_status").toString();
 				if (status.equals("failure")) {
 					conexionWebService_thread
 							.setErrorMessage("Usuario y/o contraseña inválidos");
 					hasAnError = true;
 					isReady = true;
 				}
-				Log.i("ResponseBody", "BODY: " + status);
-			} else {
-
-			}
+				//TextView I=(EditText)activity.findViewById(R.id.editInicio);
+				//TextView F=(EditText)activity.findViewById(R.id.editFin);
+				
+				obj = new JSONObject("{'starting_date':'"+"11:00"+
+						"','ending_date':'"+"20:00"+"'}");				
+				se = new StringEntity(obj.toString());
+				HttpPost httpPost = new HttpPost("http://192.168.228.101:3000/students/info.json");
+				httpPost.setEntity(se);
+				httpPost.setHeader("Content-Type", "application/json");
+				//Solicitamos
+				response = httpclient.execute(httpPost);
+				//Obtenemos
+				entity = response.getEntity();
+				is = entity.getContent();
+				//Convertimos
+				bodyJson = convertStreamToString(is);
+				this.jsonObjectAsignaturas= new JSONObject(bodyJson);
+				Log.i("INFO", bodyJson);
+			/* else {//Solicitaremos el JSON a otro web-service
+				//Enviamos el email y el password correspondientes
+				TextView I=(EditText)activity.findViewById(R.id.editInicio);
+				TextView F=(EditText)activity.findViewById(R.id.editFin);
+				
+				JSONObject obj = new JSONObject("{'starting_date':'"+I.getText()+
+						"','ending_date':'"+F.getText()+"'}");				
+				StringEntity se = new StringEntity(obj.toString());
+				httppost.setEntity(se);
+				httppost.setHeader("Content-Type", "application/json");
+				//Solicitamos
+				HttpResponse response = httpclient.execute(httppost);
+				//Obtenemos
+				HttpEntity entity = response.getEntity();
+				InputStream is = entity.getContent();
+				//Convertimos
+				String bodyJson = convertStreamToString(is);
+				bodyJson = bodyJson.substring(1, bodyJson.length() - 1);
+				Log.i("BABABA", "BODY: "+bodyJson);
+				//Parseamos
+				JSONObject json = new JSONObject(bodyJson);
+				//status puede tomar los siguientes valores: failure - succes
+				String status = json.get("sign_in_status").toString();
+				if (status.equals("failure")) {
+					conexionWebService_thread
+							.setErrorMessage("Usuario y/o contraseña inválidos");
+					hasAnError = true;
+					isReady = true;
+				}
+			}*/
 			// Parse
 			// JSONObject json = new JSONObject(responseBody);
 
@@ -152,6 +211,9 @@ public class conexionWebService_thread extends Thread {
 
 	}
 
+	public JSONObject asignaturasJSON(){
+		return jsonObjectAsignaturas;
+	}
 	public boolean hasAnError() {
 		return hasAnError;
 	}
